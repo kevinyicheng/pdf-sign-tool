@@ -5,42 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>PDF 挖洞簽名工具</title>
 <style>
-  :root { --navy:#1f2d3d; --paper:#faf8f3; --accent:#2f6f4f; --line:#d9d4c7; }
+  :root {
+    --ink:#2b3a30; --sub:#6d7d6f; --accent:#4f9d69; --accent-d:#3f8a5a;
+    --glass:rgba(255,255,255,.55); --glass-line:rgba(255,255,255,.7);
+    --tint:rgba(79,157,105,.10); --tint-line:rgba(79,157,105,.35);
+  }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  body { margin:0; font-family:-apple-system,"PingFang TC",sans-serif; background:var(--paper); color:var(--navy); }
-  header { background:var(--navy); color:#fff; padding:12px 16px; text-align:center; }
-  header h1 { margin:0; font-size:16px; }
-  header p { margin:3px 0 0; font-size:11px; opacity:.72; }
-  .bar { position:sticky; top:0; z-index:50; background:#fff; border-bottom:1px solid var(--line);
-         padding:10px 12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center; }
-  button { font:inherit; border:1px solid var(--line); background:#fff; color:var(--navy);
-           padding:9px 14px; border-radius:9px; cursor:pointer; }
-  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
+  html,body { margin:0; height:100%; }
+  body {
+    font-family:-apple-system,"PingFang TC",sans-serif; color:var(--ink);
+    background:
+      radial-gradient(1100px 600px at 12% -5%, #d9ecdd 0%, transparent 55%),
+      radial-gradient(1000px 650px at 105% 0%, #e4eef6 0%, transparent 50%),
+      linear-gradient(160deg,#eef4ec 0%,#e7f0ea 45%,#e2edf0 100%);
+    background-attachment:fixed; min-height:100%;
+  }
+  header { text-align:center; padding:26px 16px 10px; }
+  header h1 { margin:0; font-size:20px; font-weight:700; letter-spacing:.5px; }
+  header p { margin:6px 0 0; font-size:12.5px; color:var(--sub); }
+
+  .bar {
+    position:sticky; top:12px; z-index:50; margin:14px auto; max-width:900px;
+    background:var(--glass); backdrop-filter:blur(18px) saturate(1.2); -webkit-backdrop-filter:blur(18px) saturate(1.2);
+    border:1px solid var(--glass-line); border-radius:16px; box-shadow:0 8px 30px rgba(40,70,50,.10);
+    padding:10px 12px; display:none; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center;
+  }
+  .bar.show { display:flex; }
+  button {
+    font:inherit; border:1px solid var(--tint-line); background:rgba(255,255,255,.6); color:var(--ink);
+    padding:9px 16px; border-radius:11px; cursor:pointer; transition:.15s; font-weight:500;
+  }
+  button:hover { background:#fff; }
+  button.primary { background:linear-gradient(180deg,var(--accent),var(--accent-d)); color:#fff; border:none;
+                   box-shadow:0 4px 14px rgba(63,138,90,.35); }
+  button.primary:hover { filter:brightness(1.05); }
   button:disabled { opacity:.4; cursor:not-allowed; }
-  .hint { font-size:11px; color:#8a8575; width:100%; text-align:center; }
-  #viewer { padding:14px; display:flex; flex-direction:column; align-items:center; gap:14px; }
-  .page-wrap { position:relative; box-shadow:0 2px 12px rgba(0,0,0,.12); background:#fff; max-width:100%; }
+  .hint { font-size:11.5px; color:var(--sub); width:100%; text-align:center; }
+
+  /* ── 拖拉大區塊 ── */
+  .hero { max-width:900px; margin:10px auto 40px; padding:0 18px; }
+  #dropzone {
+    border:2px dashed var(--tint-line); border-radius:24px;
+    background:var(--tint); backdrop-filter:blur(6px);
+    min-height:340px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; cursor:pointer; transition:.2s; padding:40px 20px; gap:18px;
+  }
+  #dropzone:hover { background:rgba(79,157,105,.16); border-color:var(--accent); }
+  #dropzone.drag { background:rgba(79,157,105,.22); border-color:var(--accent); transform:scale(1.01);
+                   box-shadow:0 14px 40px rgba(63,138,90,.2); }
+  #dropzone .cloud { width:62px; height:62px; color:var(--accent); opacity:.85; }
+  #dropzone .t { font-size:15px; color:var(--sub); }
+  #dropzone .pill {
+    background:linear-gradient(180deg,var(--accent),var(--accent-d)); color:#fff; border:none;
+    padding:12px 30px; border-radius:30px; font-weight:600; font-size:14px;
+    box-shadow:0 6px 18px rgba(63,138,90,.35);
+  }
+
+  #viewer { padding:6px 14px 40px; display:flex; flex-direction:column; align-items:center; gap:16px; }
+  .page-wrap { position:relative; border-radius:10px; overflow:hidden;
+               box-shadow:0 10px 36px rgba(40,70,50,.16); background:#fff; max-width:100%; }
   .page-wrap canvas { display:block; max-width:100%; height:auto; }
   .overlay { position:absolute; inset:0; }
-  .box { position:absolute; border:2px solid var(--accent); background:rgba(47,111,79,.14);
-         display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--accent); font-weight:700; }
+  .box { position:absolute; border:2px solid var(--accent); background:rgba(79,157,105,.16);
+         display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--accent-d); font-weight:700;
+         border-radius:4px; }
   .box.sign { border-style:dashed; cursor:pointer; }
   .box.done { background:none; }
   .box img { width:100%; height:100%; object-fit:contain; }
   .box .del { position:absolute; top:-11px; right:-11px; width:24px; height:24px; border-radius:50%;
-              background:#c0392b; color:#fff; border:none; font-size:15px; line-height:24px; padding:0; cursor:pointer; }
-  /* 簽名彈窗 */
-  #modal { position:fixed; inset:0; background:rgba(0,0,0,.72); display:none; z-index:100;
-           flex-direction:column; align-items:center; justify-content:center; padding:14px; }
-  #modal .sheet { background:#fff; border-radius:14px; width:100%; max-width:640px; padding:16px; }
-  #modal h2 { margin:0 0 4px; font-size:16px; }
-  #modal p { margin:0 0 10px; font-size:12px; color:#8a8575; }
-  #padWrap { border:2px dashed var(--line); border-radius:10px; touch-action:none; background:#fff; }
-  #pad { display:block; width:100%; height:240px; border-radius:8px; }
-  .modbtns { display:flex; gap:8px; margin-top:12px; }
+              background:#d35b4e; color:#fff; border:none; font-size:15px; line-height:24px; padding:0; cursor:pointer;
+              box-shadow:0 2px 8px rgba(0,0,0,.2); }
+
+  /* ── 簽名彈窗（玻璃）── */
+  #modal { position:fixed; inset:0; background:rgba(30,45,35,.5); backdrop-filter:blur(6px);
+           display:none; z-index:100; flex-direction:column; align-items:center; justify-content:center; padding:16px; }
+  #modal .sheet { background:var(--glass); backdrop-filter:blur(26px) saturate(1.3); -webkit-backdrop-filter:blur(26px) saturate(1.3);
+                  border:1px solid var(--glass-line); border-radius:22px; width:100%; max-width:660px; padding:20px;
+                  box-shadow:0 20px 60px rgba(30,50,35,.3); }
+  #modal h2 { margin:0 0 4px; font-size:17px; }
+  #modal p { margin:0 0 12px; font-size:12px; color:var(--sub); }
+  #padWrap { border:2px dashed var(--tint-line); border-radius:14px; touch-action:none; background:rgba(255,255,255,.75); }
+  #pad { display:block; width:100%; height:250px; border-radius:12px; }
+  .modbtns { display:flex; gap:9px; margin-top:14px; }
   .modbtns button { flex:1; }
-  .ghost { background:var(--paper); }
-  #empty { text-align:center; color:#8a8575; padding:60px 20px; font-size:14px; }
 </style>
 </head>
 <body>
@@ -49,17 +96,29 @@
   <p>上傳 PDF → 挖洞標記 → 點框放大簽名 → 縮回套印 → 下載</p>
 </header>
 
+<input type="file" id="file" accept="application/pdf" hidden>
+
 <div class="bar" id="bar">
-  <input type="file" id="file" accept="application/pdf">
-  <button id="auto" disabled>自動偵測欄位</button>
-  <button id="clear" disabled>清除框</button>
-  <button id="toSign" class="primary" disabled>完成標記，開始簽名 →</button>
+  <button id="reselect">↻ 換一份</button>
+  <button id="auto">自動偵測欄位</button>
+  <button id="clear">清除框</button>
+  <button id="toSign" class="primary">完成標記，開始簽名 →</button>
   <button id="toMark" style="display:none">← 回標記</button>
   <button id="download" class="primary" style="display:none">下載簽好的 PDF</button>
-  <span class="hint" id="hint">① 選一份 PDF，然後在頁面上用手指拖出要簽名的框</span>
+  <span class="hint" id="hint"></span>
 </div>
 
-<div id="empty">尚未載入 PDF</div>
+<div class="hero" id="hero">
+  <div id="dropzone">
+    <svg class="cloud" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 16V9m0 0l-3 3m3-3l3 3"/>
+      <path d="M6.5 19A4.5 4.5 0 015.6 10.1 6 6 0 0117.5 9.5 3.75 3.75 0 0118 19H6.5z"/>
+    </svg>
+    <div class="t">點擊新增或拖曳 PDF 到此區塊</div>
+    <button class="pill" type="button">新增檔案</button>
+  </div>
+</div>
+
 <div id="viewer"></div>
 
 <div id="modal">
@@ -68,9 +127,9 @@
     <p>用手指或觸控筆在白色區域簽名</p>
     <div id="padWrap"><canvas id="pad"></canvas></div>
     <div class="modbtns">
-      <button class="ghost" id="padClear">清除重簽</button>
-      <button class="ghost" id="padCancel">取消</button>
-      <button class="primary" id="padOk">確認</button>
+      <button id="padClear">清除重簽</button>
+      <button id="padCancel">取消</button>
+      <button id="padOk" class="primary">確認</button>
     </div>
   </div>
 </div>
@@ -81,26 +140,32 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 const RENDER_SCALE = 1.5;
-let pdfBytes = null;
-let pages = [];            // {pageNum, viewport, overlayEl}
-let boxes = [];            // {page,x,y,w,h, sig, _el}
-let mode = "mark";
-let fileName = "signed.pdf";
-
+let pdfBytes = null, pages = [], boxes = [], mode = "mark", fileName = "signed.pdf";
 const $ = id => document.getElementById(id);
 const viewer = $("viewer");
 
-$("file").addEventListener("change", async e => {
-  const f = e.target.files[0];
-  if (!f) return;
+/* ── 檔案載入（拖拉 + 點擊）── */
+const dz = $("dropzone");
+dz.addEventListener("click", () => $("file").click());
+$("reselect").onclick = () => $("file").click();
+["dragenter","dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("drag"); }));
+["dragleave","drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("drag"); }));
+dz.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+// 整頁也接受拖放
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => { e.preventDefault(); if (!pdfBytes && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+$("file").addEventListener("change", e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+async function loadFile(f) {
+  if (f.type !== "application/pdf" && !/\.pdf$/i.test(f.name)) return alert("請選擇 PDF 檔");
   fileName = f.name.replace(/\.pdf$/i, "") + "-signed.pdf";
   pdfBytes = new Uint8Array(await f.arrayBuffer());
-  boxes = []; pages = []; viewer.innerHTML = ""; $("empty").style.display = "none";
-  mode = "mark";
+  boxes = []; pages = []; viewer.innerHTML = "";
   await renderPdf();
+  $("hero").style.display = "none";
+  $("bar").classList.add("show");
   setMode("mark");
-  ["auto","clear","toSign"].forEach(id => $(id).disabled = false);
-});
+}
 
 async function renderPdf() {
   const pdf = await pdfjsLib.getDocument({ data: pdfBytes.slice() }).promise;
@@ -108,24 +173,18 @@ async function renderPdf() {
     const page = await pdf.getPage(n);
     const viewport = page.getViewport({ scale: RENDER_SCALE });
     const wrap = document.createElement("div");
-    wrap.className = "page-wrap";
-    wrap.style.width = viewport.width + "px";
-    wrap.style.maxWidth = "100%";
+    wrap.className = "page-wrap"; wrap.style.width = viewport.width + "px"; wrap.style.maxWidth = "100%";
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width; canvas.height = viewport.height;
     wrap.appendChild(canvas);
-    const overlay = document.createElement("div");
-    overlay.className = "overlay";
-    wrap.appendChild(overlay);
+    const overlay = document.createElement("div"); overlay.className = "overlay"; wrap.appendChild(overlay);
     viewer.appendChild(wrap);
     await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
     const pageObj = { pageNum:n, viewport, overlayEl:overlay };
-    pages.push(pageObj);
-    attachDraw(pageObj);
+    pages.push(pageObj); attachDraw(pageObj);
   }
 }
 
-/* 螢幕點 → PDF 點（支援 CSS 縮放） */
 function screenToPdf(pageObj, clientX, clientY) {
   const r = pageObj.overlayEl.getBoundingClientRect();
   const vx = (clientX - r.left) / r.width * pageObj.viewport.width;
@@ -140,59 +199,48 @@ function attachDraw(pageObj) {
   const down = ev => {
     if (mode !== "mark" || ev.target.classList.contains("del")) return;
     ev.preventDefault();
-    const [cx, cy] = getXY(ev);
-    const r = ov.getBoundingClientRect();
+    const [cx, cy] = getXY(ev); const r = ov.getBoundingClientRect();
     start = { x: cx - r.left, y: cy - r.top, cx, cy };
     temp = document.createElement("div"); temp.className = "box"; ov.appendChild(temp);
   };
   const move = ev => {
     if (!start) return;
-    const [cx, cy] = getXY(ev);
-    const r = ov.getBoundingClientRect();
+    const [cx, cy] = getXY(ev); const r = ov.getBoundingClientRect();
     const x = cx - r.left, y = cy - r.top;
-    const left = Math.min(start.x, x), top = Math.min(start.y, y);
-    temp.style.left = left+"px"; temp.style.top = top+"px";
+    temp.style.left = Math.min(start.x,x)+"px"; temp.style.top = Math.min(start.y,y)+"px";
     temp.style.width = Math.abs(x-start.x)+"px"; temp.style.height = Math.abs(y-start.y)+"px";
   };
   const up = ev => {
     if (!start || !temp) { start = null; return; }
     const w = parseFloat(temp.style.width||0), h = parseFloat(temp.style.height||0);
     const [cx, cy] = getXY(ev.changedTouches ? {touches:ev.changedTouches} : ev);
-    temp.remove();
-    const sc = start; start = null;
+    temp.remove(); const sc = start; start = null;
     if (w < 14 || h < 10) return;
-    const [px1, py1] = screenToPdf(pageObj, sc.cx, sc.cy);
-    const [px2, py2] = screenToPdf(pageObj, cx, cy);
-    addBox({ page: pageObj.pageNum, x: Math.min(px1,px2), y: Math.min(py1,py2),
-             w: Math.abs(px2-px1), h: Math.abs(py2-py1), sig:null });
+    const [px1,py1] = screenToPdf(pageObj, sc.cx, sc.cy);
+    const [px2,py2] = screenToPdf(pageObj, cx, cy);
+    addBox({ page:pageObj.pageNum, x:Math.min(px1,px2), y:Math.min(py1,py2), w:Math.abs(px2-px1), h:Math.abs(py2-py1), sig:null });
   };
   ov.addEventListener("mousedown", down); window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
   ov.addEventListener("touchstart", down, {passive:false}); ov.addEventListener("touchmove", move, {passive:false}); ov.addEventListener("touchend", up);
 }
 
-function addBox(box) { boxes.push(box); drawBoxEl(box); }
-
+function addBox(box){ boxes.push(box); drawBoxEl(box); }
 function drawBoxEl(box) {
   const pageObj = pages.find(p => p.pageNum === box.page); if (!pageObj) return;
   const vp = pageObj.viewport;
-  const [vx1, vy1, vx2, vy2] = vp.convertToViewportRectangle([box.x, box.y, box.x+box.w, box.y+box.h]);
-  const el = document.createElement("div");
-  el.className = "box";
+  const [vx1,vy1,vx2,vy2] = vp.convertToViewportRectangle([box.x, box.y, box.x+box.w, box.y+box.h]);
+  const el = document.createElement("div"); el.className = "box";
   el.style.left = (Math.min(vx1,vx2)/vp.width*100)+"%";
   el.style.top = (Math.min(vy1,vy2)/vp.height*100)+"%";
   el.style.width = (Math.abs(vx2-vx1)/vp.width*100)+"%";
   el.style.height = (Math.abs(vy2-vy1)/vp.height*100)+"%";
-  renderBoxContent(box, el);
-  pageObj.overlayEl.appendChild(el);
-  box._el = el;
+  renderBoxContent(box, el); pageObj.overlayEl.appendChild(el); box._el = el;
 }
-
 function renderBoxContent(box, el) {
   el.classList.remove("sign","done");
   if (mode === "mark") {
     el.innerHTML = '<span>簽</span><button class="del">×</button>';
-    el.querySelector(".del").onclick = ev => { ev.stopPropagation();
-      boxes = boxes.filter(b => b !== box); el.remove(); };
+    el.querySelector(".del").onclick = ev => { ev.stopPropagation(); boxes = boxes.filter(b => b !== box); el.remove(); };
     el.onclick = null;
   } else {
     el.classList.add("sign");
@@ -203,24 +251,17 @@ function renderBoxContent(box, el) {
 }
 
 function setMode(m) {
-  mode = m;
-  boxes.forEach(b => b._el && renderBoxContent(b, b._el));
+  mode = m; boxes.forEach(b => b._el && renderBoxContent(b, b._el));
   const mark = m === "mark";
-  $("file").style.display = mark ? "" : "none";
-  $("auto").style.display = mark ? "" : "none";
-  $("clear").style.display = mark ? "" : "none";
-  $("toSign").style.display = mark ? "" : "none";
+  ["reselect","auto","clear","toSign"].forEach(id => $(id).style.display = mark ? "" : "none");
   $("toMark").style.display = mark ? "none" : "";
   $("download").style.display = mark ? "none" : "";
   $("hint").textContent = mark
-    ? "② 在頁面上用手指拖出要簽名的框（可多個），完成後按「開始簽名」"
-    : "③ 點每個虛線框放大簽名，全部簽完按「下載簽好的 PDF」";
+    ? "在頁面上拖出要簽名的框（可多個），完成後按「開始簽名」"
+    : "點每個虛線框放大簽名，全部簽完按「下載簽好的 PDF」";
 }
 
-$("toSign").onclick = () => {
-  if (!boxes.length) return alert("請至少標記一個簽名框");
-  setMode("sign");
-};
+$("toSign").onclick = () => { if (!boxes.length) return alert("請至少標記一個簽名框"); setMode("sign"); };
 $("toMark").onclick = () => setMode("mark");
 $("clear").onclick = () => { boxes.forEach(b => b._el && b._el.remove()); boxes = []; };
 
@@ -229,14 +270,12 @@ $("auto").onclick = async () => {
   const pdf = await pdfjsLib.getDocument({ data: pdfBytes.slice() }).promise;
   let found = 0;
   for (let n = 1; n <= pdf.numPages; n++) {
-    const page = await pdf.getPage(n);
-    const anns = await page.getAnnotations();
+    const page = await pdf.getPage(n); const anns = await page.getAnnotations();
     anns.forEach(a => {
       const name = (a.fieldName||"") + (a.alternativeText||"");
       if (a.subtype === "Widget" && (a.fieldType === "Sig" || /sign|簽|署名/i.test(name))) {
         const [x1,y1,x2,y2] = a.rect;
-        addBox({ page:n, x:Math.min(x1,x2), y:Math.min(y1,y2), w:Math.abs(x2-x1), h:Math.abs(y2-y1), sig:null });
-        found++;
+        addBox({ page:n, x:Math.min(x1,x2), y:Math.min(y1,y2), w:Math.abs(x2-x1), h:Math.abs(y2-y1), sig:null }); found++;
       }
     });
   }
@@ -244,12 +283,11 @@ $("auto").onclick = async () => {
     "這份 PDF 沒有可偵測的簽名表單欄位（可能是掃描/平面檔）。請手動拖框。");
 };
 
-/* ---- 簽名彈窗 ---- */
+/* ── 簽名彈窗 ── */
 const modal = $("modal"), pad = $("pad");
 let ctx, drawing = false, hasInk = false, activeBox = null;
 function setupPad() {
-  const ratio = window.devicePixelRatio || 1;
-  const rect = pad.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1; const rect = pad.getBoundingClientRect();
   pad.width = rect.width*ratio; pad.height = rect.height*ratio;
   ctx = pad.getContext("2d"); ctx.scale(ratio, ratio);
   ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#111"; hasInk = false;
@@ -266,18 +304,14 @@ $("padClear").onclick = setupPad;
 $("padCancel").onclick = () => { modal.style.display = "none"; activeBox = null; };
 $("padOk").onclick = () => {
   if (!hasInk) return alert("請先簽名");
-  activeBox.sig = trimmedPng();
-  renderBoxContent(activeBox, activeBox._el);
+  activeBox.sig = trimmedPng(); renderBoxContent(activeBox, activeBox._el);
   modal.style.display = "none"; activeBox = null;
 };
-
 function trimmedPng(){
-  const w = pad.width, h = pad.height;
-  const img = ctx.getImageData(0,0,w,h).data;
+  const w = pad.width, h = pad.height; const img = ctx.getImageData(0,0,w,h).data;
   let minX=w,minY=h,maxX=0,maxY=0,found=false;
   for (let y=0;y<h;y++) for (let x=0;x<w;x++){
-    if (img[(y*w+x)*4+3] > 10){ found=true;
-      if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y; } }
+    if (img[(y*w+x)*4+3] > 10){ found=true; if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y; } }
   if (!found) return pad.toDataURL("image/png");
   const p=8; minX=Math.max(0,minX-p); minY=Math.max(0,minY-p); maxX=Math.min(w,maxX+p); maxY=Math.min(h,maxY+p);
   const cw=maxX-minX, ch=maxY-minY;
@@ -286,7 +320,7 @@ function trimmedPng(){
   return oc.toDataURL("image/png");
 }
 
-/* ---- 下載：pdf-lib 套印 ---- */
+/* ── 下載 ── */
 $("download").onclick = async () => {
   const signed = boxes.filter(b => b.sig).length;
   if (!signed) return alert("還沒有任何簽名");
@@ -294,19 +328,16 @@ $("download").onclick = async () => {
   const btn = $("download"); btn.disabled = true; btn.textContent = "套印中…";
   try {
     const { PDFDocument } = PDFLib;
-    const doc = await PDFDocument.load(pdfBytes);
-    const pgs = doc.getPages();
+    const doc = await PDFDocument.load(pdfBytes); const pgs = doc.getPages();
     for (const b of boxes) {
       if (!b.sig) continue;
-      const png = await doc.embedPng(b.sig);
-      const page = pgs[b.page - 1];
+      const png = await doc.embedPng(b.sig); const page = pgs[b.page - 1];
       const scale = Math.min(b.w/png.width, b.h/png.height);
       const dw = png.width*scale, dh = png.height*scale;
       page.drawImage(png, { x: b.x+(b.w-dw)/2, y: b.y+(b.h-dh)/2, width:dw, height:dh });
     }
     const out = await doc.save();
-    const blob = new Blob([out], { type:"application/pdf" });
-    const url = URL.createObjectURL(blob);
+    const blob = new Blob([out], { type:"application/pdf" }); const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = fileName;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
