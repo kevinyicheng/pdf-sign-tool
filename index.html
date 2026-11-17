@@ -150,14 +150,16 @@ dz.addEventListener("click", () => $("file").click());
 $("reselect").onclick = () => $("file").click();
 ["dragenter","dragover"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add("drag"); }));
 ["dragleave","drop"].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove("drag"); }));
-dz.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
-// 整頁也接受拖放
+// 只在 window 層處理放檔（避免 dropzone + window 重複觸發）
 window.addEventListener("dragover", e => e.preventDefault());
-window.addEventListener("drop", e => { e.preventDefault(); if (!pdfBytes && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
-$("file").addEventListener("change", e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+window.addEventListener("drop", e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+$("file").addEventListener("change", e => { if (e.target.files[0]) loadFile(e.target.files[0]); e.target.value = ""; });
 
+let loading = false;
 async function loadFile(f) {
+  if (loading) return;            // 防重入：避免同一次放檔被處理兩次
   if (f.type !== "application/pdf" && !/\.pdf$/i.test(f.name)) return alert("請選擇 PDF 檔");
+  loading = true;
   fileName = f.name.replace(/\.pdf$/i, "") + "-signed.pdf";
   pdfBytes = new Uint8Array(await f.arrayBuffer());
   boxes = []; pages = []; viewer.innerHTML = "";
@@ -165,6 +167,7 @@ async function loadFile(f) {
   $("hero").style.display = "none";
   $("bar").classList.add("show");
   setMode("mark");
+  loading = false;
 }
 
 async function renderPdf() {
